@@ -147,6 +147,22 @@ npx hardhat run --network polygon_amoy scripts/checkRoundResults.js
 
 ## Дополнительные команды
 
+### Изменение периода ставок
+
+```bash
+npx hardhat run --network polygon_amoy scripts/setBettingPeriod.js
+```
+
+Скрипт изменяет период ставок на 1 час (3600 секунд). Можно модифицировать значение `newBettingPeriod` в скрипте для установки другой продолжительности.
+
+### Изменение задержки результата
+
+```bash
+npx hardhat run --network polygon_amoy scripts/setResultDelay.js
+```
+
+Скрипт изменяет задержку результата на 15 минут (900 секунд). Можно модифицировать значение `newResultDelay` в скрипте для установки другой продолжительности.
+
 ### Сброс текущего раунда
 
 ```bash

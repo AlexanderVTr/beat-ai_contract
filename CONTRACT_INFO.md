@@ -11,17 +11,14 @@
 
 ### Управление периодами
 
-Для изменения периодов используйте скрипт `updateTimePeriods.js`:
+Для изменения периодов используйте следующие скрипты:
 
 ```bash
 # Установка периода ставок в 10 минут
-BETTING_PERIOD=10m npx hardhat run scripts/updateTimePeriods.js --network polygon_amoy
+PERIOD=10m npx hardhat run scripts/setBettingPeriod.js --network polygon_amoy
 
 # Установка задержки результатов в 5 минут
-RESULT_DELAY=5m npx hardhat run scripts/updateTimePeriods.js --network polygon_amoy
-
-# Установка обоих периодов одновременно
-BETTING_PERIOD=10m RESULT_DELAY=5m npx hardhat run scripts/updateTimePeriods.js --network polygon_amoy
+DELAY=5m npx hardhat run scripts/setResultDelay.js --network polygon_amoy
 ```
 
 Поддерживаемые форматы времени:
@@ -32,13 +29,20 @@ BETTING_PERIOD=10m RESULT_DELAY=5m npx hardhat run scripts/updateTimePeriods.js 
 
 ### Проверка состояния контракта
 
-Для проверки текущего состояния контракта используйте скрипт `checkDynamicContract.js`:
+Для проверки текущего состояния контракта используйте следующие скрипты:
 
 ```bash
-npx hardhat run scripts/checkDynamicContract.js --network polygon_amoy
+# Проверка статуса текущего раунда
+npx hardhat run scripts/checkRoundStatus.js --network polygon_amoy
+
+# Проверка результатов раунда
+npx hardhat run scripts/checkRoundResults.js --network polygon_amoy
+
+# Проверка баланса контракта
+npx hardhat run scripts/checkContractBalance.js --network polygon_amoy
 ```
 
-Скрипт выведет информацию о:
+Эти скрипты выведут информацию о:
 
 - Текущих периодах ставок и задержки результатов
 - Текущей цене BTC
@@ -47,7 +51,7 @@ npx hardhat run scripts/checkDynamicContract.js --network polygon_amoy
 
 ### Обновление цены BTC в мок-оракуле
 
-Для обновления цены BTC в мок-оракуле используйте скрипт `updateMockPrice.js`:
+Для обновления цены BTC в мок-оракуле используйте:
 
 ```bash
 NEW_PRICE=92000 npx hardhat run scripts/updateMockPrice.js --network polygon_amoy
@@ -59,6 +63,25 @@ NEW_PRICE=92000 npx hardhat run scripts/updateMockPrice.js --network polygon_amo
 
 ```bash
 INITIAL_BETTING_PERIOD=10m INITIAL_RESULT_DELAY=5m npx hardhat ignition deploy ./ignition/modules/deployWithMockDynamic.js --network polygon_amoy
+```
+
+### Дополнительные команды для тестирования
+
+```bash
+# Запуск нового раунда
+npx hardhat run scripts/startRoundNow.js --network polygon_amoy
+
+# Размещение тестовой ставки
+npx hardhat run scripts/placeBetTest.js --network polygon_amoy
+
+# Установка предсказания AI
+npx hardhat run scripts/setAIPredictionTest.js --network polygon_amoy
+
+# Разрешение раунда (тест)
+npx hardhat run scripts/resolveRoundTest.js --network polygon_amoy
+
+# Сброс раунда
+npx hardhat run scripts/resetRound.js --network polygon_amoy
 ```
 
 ## License

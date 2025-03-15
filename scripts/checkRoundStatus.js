@@ -20,16 +20,65 @@ async function main() {
   try {
     // Получаем информацию о текущем раунде
     const roundInfo = await contract.getCurrentRoundInfo();
-    console.log("Информация о текущем раунде:");
+    console.log("\nИнформация о текущем раунде:");
     console.log(`  Номер раунда: ${roundInfo.roundNum.toString()}`);
     console.log(`  Время начала: ${new Date(Number(roundInfo.startTime) * 1000).toLocaleString()}`);
     console.log(`  Время окончания ставок: ${new Date(Number(roundInfo.endTime) * 1000).toLocaleString()}`);
     console.log(`  Время результата: ${new Date(Number(roundInfo.resultTime) * 1000).toLocaleString()}`);
     console.log(`  Количество ставок: ${roundInfo.totalBets.toString()}`);
-    console.log(`  Общий призовой фонд: ${ethers.utils.formatEther(roundInfo.totalPrizePool)} MATIC`);
-    console.log(`  Прогноз AI установлен: ${roundInfo.isAIPredictionSet}`);
+    
+    // Получаем ставки текущего раунда напрямую
+    const bets = await contract.getCurrentRoundBets();
+    
+    if (bets && bets.length > 0) {
+      let totalPool = ethers.parseEther("0");
+      
+      for (let i = 0; i < bets.length; i++) {
+        totalPool = totalPool + bets[i].amount;
+      }
+      
+      console.log(`  Общий призовой фонд: ${ethers.formatEther(totalPool)} MATIC`);
+    } else {
+      console.log(`  Общий призовой фонд: 0 MATIC`);
+    }
+    
+    if (roundInfo.isAIPredictionSet !== undefined) {
+      console.log(`  Прогноз AI установлен: ${roundInfo.isAIPredictionSet}`);
+    }
   } catch (error) {
-    console.error("Ошибка при получении информации о раунде:", error.message);
+    console.error("\n⚠️ Ошибка при получении информации о раунде:", error.message);
+    
+    // Пробуем получить информацию альтернативным способом
+    try {
+      const roundNumber = await contract.roundNumber();
+      const currentRoundStart = await contract.currentRoundStart();
+      const bettingPeriod = await contract.bettingPeriod();
+      const resultDelay = await contract.resultDelay();
+      
+      console.log("\nИнформация о текущем раунде (альтернативный метод):");
+      console.log(`  Номер раунда: ${roundNumber.toString()}`);
+      console.log(`  Время начала: ${new Date(Number(currentRoundStart) * 1000).toLocaleString()}`);
+      console.log(`  Время окончания ставок: ${new Date((Number(currentRoundStart) + Number(bettingPeriod)) * 1000).toLocaleString()}`);
+      console.log(`  Время результата: ${new Date((Number(currentRoundStart) + Number(bettingPeriod) + Number(resultDelay)) * 1000).toLocaleString()}`);
+      
+      // Получаем ставки текущего раунда
+      const bets = await contract.getCurrentRoundBets();
+      console.log(`  Количество ставок: ${bets.length}`);
+      
+      if (bets && bets.length > 0) {
+        let totalPool = ethers.parseEther("0");
+        
+        for (let i = 0; i < bets.length; i++) {
+          totalPool = totalPool + bets[i].amount;
+        }
+        
+        console.log(`  Общий призовой фонд: ${ethers.formatEther(totalPool)} MATIC`);
+      } else {
+        console.log(`  Общий призовой фонд: 0 MATIC`);
+      }
+    } catch (innerError) {
+      console.error("\n⚠️ Не удалось получить информацию альтернативным способом:", innerError.message);
+    }
   }
   
   try {
@@ -45,25 +94,19 @@ async function main() {
     console.log(`  Период ставок: ${Number(bettingPeriod) / 60} минут`);
     console.log(`  Задержка результата: ${Number(resultDelay) / 60} минут`);
     
-    // Проверяем, что раунд действительно начался
-    if (roundNumber.toString() === "1" && currentRoundStart.toString() !== "0") {
-      console.log("\n✅ Первый раунд успешно запущен!");
-      
-      // Проверяем статус раунда
-      if (status === "READY_FOR_RESOLUTION") {
-        console.log("⚠️ Раунд готов к разрешению. Вы можете вызвать функцию determineWinnersAndStartNewRound()");
-      } else if (status === "BETTING_OPEN") {
-        console.log("✅ Раунд открыт для ставок.");
-      } else if (status === "WAITING_FOR_RESULT") {
-        console.log("⏳ Раунд в ожидании результата.");
-      } else if (status === "WAITING_TO_START") {
-        console.log("⏳ Раунд ожидает начала.");
-      }
-    } else {
-      console.log("\n❌ Первый раунд не был запущен или был уже завершен.");
+    // Проверяем статус раунда
+    console.log("\nСтатус раунда:");
+    if (status === "READY_FOR_RESOLUTION") {
+      console.log("⚠️  Раунд готов к разрешению. Вы можете вызвать функцию determineWinnersAndStartNewRound()");
+    } else if (status === "BETTING_OPEN") {
+      console.log("✅ Раунд открыт для ставок");
+    } else if (status === "WAITING_FOR_RESULT") {
+      console.log("⏳ Раунд в ожидании результата");
+    } else if (status === "WAITING_TO_START") {
+      console.log("⏳ Раунд ожидает начала");
     }
   } catch (error) {
-    console.error("Ошибка при получении состояния контракта:", error.message);
+    console.error("\n⚠️ Ошибка при получении состояния контракта:", error.message);
   }
 }
 

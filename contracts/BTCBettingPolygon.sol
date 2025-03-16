@@ -25,7 +25,7 @@ contract BTCBettingPolygon {
     uint256 public bettingPeriod = 22 hours; // Betting period duration (default 22 hours)
     uint256 public resultDelay = 2 hours; // Time between betting end and result (default 2 hours)
     uint256 public currentRoundStart; // Start time of current round
-    uint256 public feePercentage = 5; // Contract fee (5%)
+    uint256 public feePercentage = 75; // Contract fee (7.5%, multiplied by 10 for precision)
     uint256 public roundNumber; // Current round number
 
     // Minimum values for time periods to ensure contract security
@@ -267,7 +267,6 @@ contract BTCBettingPolygon {
         );
         uint256 winnerCount = 0;
         uint256 totalPrizePool = 0;
-        uint256 totalWinningBets = 0;
 
         // Calculate total prize pool
         for (uint i = 0; i < roundBets[currentRound].length; i++) {
@@ -293,6 +292,10 @@ contract BTCBettingPolygon {
 
         // Second pass: collect only the winners who beat AI AND achieved the best difference
         if (bestDifference < aiDifference) {
+            // Calculate prize pool after fee (using 7.5% fee)
+            uint256 prizePoolAfterFee = (totalPrizePool * 925) / 1000;
+
+            // First collect all winners
             for (uint i = 0; i < roundBets[currentRound].length; i++) {
                 uint256 difference = absDiff(
                     roundBets[currentRound][i].predictedPrice,
@@ -302,21 +305,28 @@ contract BTCBettingPolygon {
                     winners[winnerCount] = roundBets[currentRound][i].player;
                     winnerAmounts[winnerCount] = roundBets[currentRound][i]
                         .amount;
-                    totalWinningBets += roundBets[currentRound][i].amount;
                     winnerCount++;
                 }
             }
 
-            // Calculate prize pool after fee
-            uint256 prizePoolAfterFee = (totalPrizePool *
-                (100 - feePercentage)) / 100;
-
-            // Distribute prizes proportionally to bet amounts
-            for (uint i = 0; i < winnerCount; i++) {
-                uint256 winnerShare = (prizePoolAfterFee * winnerAmounts[i]) /
-                    totalWinningBets;
-                payable(winners[i]).transfer(winnerShare);
+            // If there's only one winner, they get the entire prize pool after fee
+            if (winnerCount == 1) {
+                payable(winners[0]).transfer(prizePoolAfterFee);
             }
+            // If there are multiple winners, distribute proportionally to their bet amounts
+            else if (winnerCount > 1) {
+                uint256 totalWinningBets = 0;
+                for (uint i = 0; i < winnerCount; i++) {
+                    totalWinningBets += winnerAmounts[i];
+                }
+
+                for (uint i = 0; i < winnerCount; i++) {
+                    uint256 winnerShare = (prizePoolAfterFee *
+                        winnerAmounts[i]) / totalWinningBets;
+                    payable(winners[i]).transfer(winnerShare);
+                }
+            }
+
             // Transfer remaining balance (fees) to owner
             payable(owner).transfer(address(this).balance);
         } else {
@@ -501,18 +511,16 @@ contract BTCBettingPolygon {
         return (count, totalAmount, prices);
     }
 
-    // Функция для сброса текущего раунда (только для тестирования)
+    // Function to reset current round (only owner)
     function resetCurrentRound() external onlyOwner {
-        // Проверяем, что мы не в активном периоде ставок
-        string memory status = getRoundStatus();
-        require(
-            keccak256(abi.encodePacked(status)) !=
-                keccak256(abi.encodePacked("BETTING_OPEN")),
-            "Cannot reset during active betting"
-        );
+        // Start new round
+        currentRoundStart = _getNextRoundStart();
+        roundNumber++;
 
-        // Устанавливаем новое время начала раунда
-        currentRoundStart = block.timestamp + 5 minutes; // Начинаем через 5 минут
+        // Reset round data
+        delete roundBets[roundNumber];
+        roundAIPredictionSet[roundNumber] = false;
+        delete roundAIPredictions[roundNumber];
 
         emit NewRoundStarted(
             roundNumber,
